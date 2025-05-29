@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>汎用音声クイズアプリ</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 2em; }
+    button { font-size: 1em; margin: 0.5em; padding: 0.5em 1em; }
+    #question { font-size: 1.2em; margin-top: 1em; }
+    #result { margin-top: 1em; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>汎用音声クイズアプリ</h1>
+  <div id="dataset-buttons"></div>
+  <div id="quiz-container" style="display:none;">
+    <p id="question"></p>
+    <p id="result"></p>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+  <script>
+    const datasets = {
+      "英単語（英和）": "data/english_to_jp.csv",
+      "英単語（和英）": "data/jp_to_english.csv"
+    };
+    let qaList = [], current = 0, score = 0;
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = "ja-JP";
+
+    function levenshtein(a, b) {
+      const dp = Array(a.length+1).fill().map(() => Array(b.length+1).fill(0));
+      for (let i=0;i<=a.length;i++) dp[i][0]=i;
+      for (let j=0;j<=b.length;j++) dp[0][j]=j;
+      for (let i=1;i<=a.length;i++){
+        for (let j=1;j<=b.length;j++){
+          dp[i][j] = Math.min(
+            dp[i-1][j]+1,
+            dp[i][j-1]+1,
+            dp[i-1][j-1]+(a[i-1]===b[j-1]?0:1)
+          );
+        }
+      }
+      return dp[a.length][b.length];
+    }
+
+    recognition.onresult = event => {
+      const transcript = event.results[0][0].transcript.trim().toLowerCase();
+      const correct = qaList[current].answer.trim().toLowerCase();
+      const dist = levenshtein(transcript, correct);
+      const threshold = Math.max(1, Math.floor(correct.length*0.3));
+      const resultEl = document.getElementById("result");
+      if (dist <= threshold) {
+        new Audio("assets/pinpon.mp3").play();
+        resultEl.textContent = "正解！";
+        score++;
+      } else {
+        new Audio("assets/buu.mp3").play();
+        resultEl.textContent = `不正解…正解は "${qaList[current].answer}"`;
+      }
+      current++;
+      if (current < qaList.length) {
+        setTimeout(() => { resultEl.textContent=""; askQuestion(); }, 2000);
+      } else {
+        setTimeout(() => { resultEl.textContent=`終了！正解数: ${score}/${qaList.length}`; }, 2000);
+      }
+    };
+
+    function speak(text) {
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "ja-JP";
+      utter.onend = () => recognition.start();
+      speechSynthesis.speak(utter);
+    }
+
+    function askQuestion() {
+      const qa = qaList[current];
+      document.getElementById("question").textContent = `問題${current+1}: ${qa.question}`;
+      speak(qa.question);
+    }
+
+    function startQuiz(path) {
+      Papa.parse(path, {
+        download: true,
+        header: true,
+        complete: results => {
+          qaList = results.data.filter(r => r.question && r.answer);
+          current = 0; score = 0;
+          document.getElementById("dataset-buttons").style.display = "none";
+          document.getElementById("quiz-container").style.display = "block";
+          askQuestion();
+        }
+      });
+    }
+
+    // Generate buttons
+    const btns = document.getElementById("dataset-buttons");
+    for (const [label, path] of Object.entries(datasets)) {
+      const btn = document.createElement("button");
+      btn.textContent = label;
+      btn.onclick = () => startQuiz(path);
+      btns.appendChild(btn);
+    }
+  </script>
+</body>
+</html>
