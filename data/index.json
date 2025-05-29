@@ -6,9 +6,5 @@
   {
     "label": "英単語（和英）",
     "file": "jp_to_english.csv"
-  },
-  {
-    "label": "理科",
-    "file": "science.csv"
   }
 ]
