@@ -1,0 +1,10 @@
+[
+  {
+    "label": "英単語（英和）",
+    "file": "english_to_jp.csv"
+  },
+  {
+    "label": "英単語（和英）",
+    "file": "jp_to_english.csv"
+  }
+]
