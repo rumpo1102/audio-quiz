@@ -1,5 +1,9 @@
 [
   {
+    "label": "理科",
+    "file": "science.csv"
+  },
+  {
     "label": "英単語（英和）",
     "file": "english_to_jp.csv"
   },
